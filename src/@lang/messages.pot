@@ -1,0 +1,15 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2018-06-16T19:49:33.486Z\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"MIME-Version: 1.0\n"
+"X-Generator: react-intl-po\n"
+
+
+#: ./src/@lang/.messages/src/@printers/parse/index.json
+#. [@printers.parse.index]
+#. defaultMessage is:
+#. Open File
+msgid "Open File"
+msgstr ""

@@ -1,0 +1,56 @@
+{
+  "name": "photo-tagger",
+  "version": "0.0.1",
+  "description": "A specialized Electron application for the customers of stackbee.io",
+  "main": "main/index.js",
+  "scripts": {
+    "start": "electron . --allow-file-access-from-files",
+    "intl:pot": "react-intl-po json2pot './src/@lang/.messages/**/*.json' -o './src/@lang/messages.pot'",
+    "intl:json": "react-intl-po po2json './src/@lang/translations/messages.*.po' -m './src/@lang/.messages/**/*.json' -o './src/@lang/messages.json'",
+    "build": "next build renderer && next export renderer",
+    "dist": "yarn run build && build"
+  },
+  "build": {
+    "files": [
+      "**/*",
+      "!renderer",
+      "renderer/out"
+    ]
+  },
+  "repository": "https://github.com/rocket-monkey/stackbee.io",
+  "bugs": {
+    "url": "https://github.com/rocket-monkey/stackbee.io/issues"
+  },
+  "homepage": "https://github.com/rocket-monkey/stackbee.io#readme",
+  "keywords": [
+    "Electron",
+    "stackbee.io"
+  ],
+  "author": "Remo Vetere",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "babel-core": "^6.26.3",
+    "babel-plugin-module-resolver": "^3.1.1",
+    "babel-plugin-react-intl": "^2.4.0",
+    "electron": "^2.0.0",
+    "electron-builder": "^20.15.1",
+    "next": "^6.0.4-canary.7",
+    "react": "^16.4.1",
+    "react-dom": "^16.4.1"
+  },
+  "dependencies": {
+    "app-root-path": "^2.0.1",
+    "bcrypt": "^2.0.1",
+    "csv-parse": "^2.5.0",
+    "electron-is-dev": "^0.3.0",
+    "electron-next": "^3.1.4",
+    "express": "^4.16.3",
+    "mongoose": "^5.1.5",
+    "node-table-to-csv": "^0.1.0",
+    "object-hash": "^1.3.0",
+    "react-container-dimensions": "^1.3.4",
+    "react-intl": "^2.4.0",
+    "recompose": "^0.27.1",
+    "styled-jsx": "^2.2.6"
+  }
+}
