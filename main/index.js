@@ -31,6 +31,12 @@ app.on('ready', async () => {
   // await connectDb()
   await server(isDev)
 
+  process.on('SIGINT', function () {
+    const sessionId = localStorage.getItem('currentSession')
+    console.log('PRINT MEDIA:', localeStorage.getItem(`meta-${sessionId}`))
+    console.log('PRINT GROUPS:', localeStorage.getItem(`groups-${sessionId}`))
+  })
+
   global.isDev = isDev
 
   const url = isDev ? devPath : prodPath

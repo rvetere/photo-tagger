@@ -47,6 +47,7 @@ export default class Video extends Component {
           onEnded={() => {
             this.videoRef.current.play()
           }}
+          onClick={this.props.handleClick}
           controls={!noControls}
           muted
         />

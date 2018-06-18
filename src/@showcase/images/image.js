@@ -54,7 +54,7 @@ export default class Image extends Component {
     }
     return (
       <div className='media'>
-        <img className={`${groupId ? 'in-group' : ''} ${metaData.tags ? 'has-tags' : ''}`} media={props.media} ref={this.imageRef} style={{...styleObj, ...defaultStyles}} src={src} alt={alt} onLoad={this.handleOnLoad} />
+        <img className={`${groupId ? 'in-group' : ''} ${metaData.tags ? 'has-tags' : ''}`} media={props.media} ref={this.imageRef} style={{...styleObj, ...defaultStyles}} src={src} alt={alt} onLoad={this.handleOnLoad} onClick={this.props.handleClick} />
         <MetaInfo media={props.media} metaData={metaData} groupId={groupId} {...props} />
 
         <style jsx>{`

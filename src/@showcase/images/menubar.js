@@ -11,7 +11,6 @@ export default class Sidebar extends Component {
     this.renderMedia = this.renderMedia.bind(this)
     this.finishSelection = this.finishSelection.bind(this)
     this.groupSelection = this.groupSelection.bind(this)
-    this.handleClick = this.handleClick.bind(this)
     this.handleChange = this.handleChange.bind(this)
     this.editTagName = this.editTagName.bind(this)
     this.spreadTag = this.spreadTag.bind(this)
@@ -19,65 +18,24 @@ export default class Sidebar extends Component {
     this.handleMediaClick = this.handleMediaClick.bind(this)
 
     this.state = {
-      isSelecting: false,
-      tagEditing: {},
-      tagSpreading: null
+      tagEditing: {}
     }
   }
 
   finishSelection () {
     const selectionValue = this.inputRef.current.value
     this.props.onSelectionFinish(selectionValue)
-    this.setState({ isSelecting: false })
   }
 
   groupSelection () {
     this.props.onSelectionGroup()
-    this.setState({ isSelecting: false })
   }
 
   handleMediaClick (event) {
     event.preventDefault()
     const media = event.target.attributes.media.nodeValue
     const filtered = this.props.selection.filter((entry) => entry !== media)
-    this.setState({ isSelecting: filtered.length > 0 })
     this.props.updateImagesState({ selection: filtered })
-  }
-
-  async handleClick (event) {
-    const { selection, isEditingGroup } = this.props
-    const { isSelecting, tagSpreading } = this.state
-
-    if (isEditingGroup && event.target.className.includes('in-group')) {
-      return
-    }
-
-    if (!isSelecting && !tagSpreading) {
-      this.setState({ isSelecting: true })
-    }
-
-    const media = event.target.attributes.media.nodeValue
-
-    if (tagSpreading) {
-      await this.props.updateImagesState({ selection: [media] })
-      return this.props.onSelectionFinish(tagSpreading)
-    }
-
-    let alreadyExists = false
-    selection.forEach((entry) => {
-      if (entry === media) {
-        alreadyExists = true
-      }
-    })
-
-    if (!alreadyExists) {
-      selection.push(media)
-      this.props.updateImagesState({ selection })
-    } else {
-      const filtered = selection.filter((entry) => entry !== media)
-      this.setState({ isSelecting: filtered.length > 0 })
-      this.props.updateImagesState({ selection: filtered })
-    }
   }
 
   async handleChange (event) {
@@ -85,6 +43,11 @@ export default class Sidebar extends Component {
     if (filter === 'animated-only') {
       this.props.setAnimatedOnly(event.target.checked)
       await this.props.updateImagesState({ withAnimatedOnly: event.target.checked })
+      return
+    }
+    if (filter === 'static-only') {
+      this.props.setStaticOnly(event.target.checked)
+      await this.props.updateImagesState({ withStaticOnly: event.target.checked })
       return
     }
     this.props.setFilter(filter, event.target.checked)
@@ -111,9 +74,9 @@ export default class Sidebar extends Component {
       return console.warn('exit group editing first')
     }
 
-    let { tagSpreading } = this.state
+    let { tagSpreading } = this.props
     tagSpreading = tag
-    this.setState({ tagSpreading })
+    this.props.updateImagesState({ tagSpreading })
   }
 
   handleTagEdit (event, index) {
@@ -127,18 +90,10 @@ export default class Sidebar extends Component {
     }
   }
 
-  componentDidMount () {
-    setTimeout(, 500)
-  }
-
-  componentWillUnmount () {
-    const allTags = Array.from(document.getElementsByTagName('img')).concat(Array.from(document.getElementsByTagName('video')))
-    allTags.forEach((tag) => tag.removeEventListener('click', this.handleClick))
-  }
-
   render () {
-    const { meta, selection, folderPath, isEditingGroup } = this.props
-    const { isSelecting, tagEditing, tagSpreading } = this.state
+    const { meta, selection, folderPath, isEditingGroup, withAnimatedOnly, withStaticOnly, tagSpreading } = this.props
+    const { tagEditing } = this.state
+    const isSelecting = selection.length > 0
 
     const tags = []
     Object.keys(meta).forEach((key) => {
@@ -151,25 +106,20 @@ export default class Sidebar extends Component {
 
     return (
       <article>
-        <button onDoubleClick={this.props.resetSession}>
-          <FormattedMessage id='@showcase.images.menuBar.resetSession' defaultMessage='Reset Session' />
-        </button>
-
-
         {tags.length > 0 && <hr />}
 
         <div className='tag-filters'>
-          {Array.from(['animated-only']).concat(tags).map((tag, index) => {
-            const isTagEditing = tagEditing[index] && index > 0
+          {Array.from(['animated-only', 'static-only']).concat(tags).map((tag, index) => {
+            const isTagEditing = tagEditing[index] && index > 1
             return (
               <div key={index} className='filter'>
                 {!isTagEditing &&
                 <Fragment>
                   <label>
-                    <input name={tag} onChange={this.handleChange} type='checkbox' />
+                    <input name={tag} disabled={index < 2 ? (index === 0 ? withStaticOnly : withAnimatedOnly) : false} onChange={this.handleChange} type='checkbox' />
                     {tag}
                   </label>
-                  {index > 0 &&
+                  {index > 1 &&
                   <Fragment>
                     {' '}
                     <button className='edit-button' onClick={() => { this.editTagName(tag, index) }}>
@@ -224,7 +174,7 @@ export default class Sidebar extends Component {
         {(!isEditingGroup && tagSpreading) &&
         <Fragment>
           <hr />
-          <button onClick={() => this.setState({ tagSpreading: null })}>
+          <button onClick={() => this.props.updateImagesState({ tagSpreading: null })}>
             <FormattedMessage id='@showcase.images.menuBar.abortTagSpreading' defaultMessage='Stop spreading' />
           </button>
         </Fragment>}

@@ -12,7 +12,7 @@ export default class ShowCase extends Component {
     const folderPath = localStorage.getItem('folderPath')
 
     let initialMedias = []
-    if (folderPath) {
+    if (folderPath && folderPath !== 'null' && folderPath !== null) {
       initialMedias = this.walkSync(folderPath)
     }
 

@@ -7,6 +7,7 @@ import Video from './video'
 import Sidebar from './sidebar'
 import Main from './main'
 import Menubar from './menubar'
+import Stats from './stats'
 
 const sizeSmall = 350
 const sizeMedium = 600
@@ -51,10 +52,13 @@ class Images extends Component {
     this.setItemSafe = this.setItemSafe.bind(this)
     this.deleteSelection = this.deleteSelection.bind(this)
     this.resetSession = this.resetSession.bind(this)
+    this.handleClick = this.handleClick.bind(this)
 
     const folderPathHash = stringHash(this.props.folderPath)
     const metaItemId = `meta-${folderPathHash}`
     const groupsItemId = `groups-${folderPathHash}`
+
+    this.setItemSafe('sessionId', folderPathHash)
 
     const loadedMediasStr = localStorage.getItem('loadedMedias')
     const loadedMedias = (typeof loadedMediasStr !== 'undefined' && loadedMediasStr !== 'null' && loadedMediasStr !== null) ? JSON.parse(loadedMediasStr) : []
@@ -66,8 +70,10 @@ class Images extends Component {
       meta: this.props.meta,
       groups: this.props.groups,
       filter: {},
+      tagSpreading: null,
       isEditingGroup: null,
       withAnimatedOnly: null,
+      withStaticOnly: null,
       metaItemId,
       groupsItemId
     }
@@ -142,6 +148,7 @@ class Images extends Component {
         return false
       }
       loadedMedias = loadedMedias.filter((imageState) => hasTag(imageState.media))
+      finalGroups = finalGroups.filter((imageState) => hasTag(imageState.media))
     }
 
     const portraits = loadedMedias.filter(({ isPortrait }) => (
@@ -291,6 +298,7 @@ class Images extends Component {
       groupId,
       isSelected,
       media,
+      handleClick: this.handleClick,
       onLoad: this.handleOnLoad,
       isEditingGroup: this.state.isEditingGroup,
       startEditingGroup: this.startEditingGroup,
@@ -305,25 +313,59 @@ class Images extends Component {
     return <Image key={`images-${keyType}-${index}`} src={`file:///${folderPath}/${media}`} alt='' {...injectedProps} />
   }
 
+  async handleClick (event) {
+    const { selection, isEditingGroup, isSelecting, tagSpreading } = this.state
+
+    if (isEditingGroup && event.target.className.includes('in-group')) {
+      return
+    }
+
+    const media = event.target.attributes.media.nodeValue
+
+    if (tagSpreading) {
+      await this.setState({ selection: [media] })
+      return this.onSelectionFinish(tagSpreading)
+    }
+
+    let alreadyExists = false
+    selection.forEach((entry) => {
+      if (entry === media) {
+        alreadyExists = true
+      }
+    })
+
+    if (!alreadyExists) {
+      selection.push(media)
+      this.setState({ selection })
+    } else {
+      const filtered = selection.filter((entry) => entry !== media)
+      this.setState({ selection: filtered })
+    }
+  }
+
   render () {
-    const { medias, folderPath, setAnimatedOnly } = this.props
-    const { loaded, loadedMedias, selection, meta } = this.state
+    const { medias, folderPath, setAnimatedOnly, setStaticOnly } = this.props
+    const { loaded, loadedMedias, selection, meta, withAnimatedOnly, withStaticOnly, tagSpreading } = this.state
     return (
       <Fragment>
         {
           loaded &&
           <div>
+            <Stats numOfFilesLoaded={medias.length} resetSession={this.resetSession} />
             {this.renderFinalImages()}
             <Menubar
               ref={this.menubarRef}
+              tagSpreading={tagSpreading}
               folderPath={folderPath}
               setFilter={this.setFilter}
               handleTagEdit={this.handleTagEdit}
               isEditingGroup={this.state.isEditingGroup}
               abortGroupEdit={this.abortGroupEdit}
               deleteSelection={this.deleteSelection}
-              resetSession={this.resetSession}
               setAnimatedOnly={setAnimatedOnly}
+              withAnimatedOnly={withAnimatedOnly}
+              setStaticOnly={setStaticOnly}
+              withStaticOnly={withStaticOnly}
               meta={meta}
               isVideo={Images.isVideo}
               onSelectionFinish={this.onSelectionFinish}
@@ -358,7 +400,8 @@ class Images extends Component {
 
 export default compose(
   withState('animatedOnly', 'setAnimatedOnly', false),
-  mapProps(({ medias, animatedOnly, setAnimatedOnly, ...props }) => {
+  withState('staticOnly', 'setStaticOnly', false),
+  mapProps(({ medias, animatedOnly, setAnimatedOnly, staticOnly, setStaticOnly, ...props }) => {
     const folderPathHash = stringHash(props.folderPath)
     const metaItemId = `meta-${folderPathHash}`
     const groupsItemId = `groups-${folderPathHash}`
@@ -372,13 +415,23 @@ export default compose(
         return Images.isVideo(m) || ext.includes('gif')
       })
     }
+
+    if (staticOnly) {
+      finalMedias = finalMedias.filter(m => {
+        const ext = m.split('.')[1]
+        return !Images.isVideo(m) && !ext.includes('gif')
+      })
+    }
+
     return {
       ...props,
       medias: finalMedias,
       meta,
       groups,
       animatedOnly,
-      setAnimatedOnly
+      setAnimatedOnly,
+      staticOnly,
+      setStaticOnly
     }
   })
 )(Images)
