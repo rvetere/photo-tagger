@@ -50,6 +50,11 @@ export default class Sidebar extends Component {
       await this.props.updateImagesState({ withStaticOnly: event.target.checked })
       return
     }
+    if (filter === 'untagged-only') {
+      this.props.setUntaggedOnly(event.target.checked)
+      await this.props.updateImagesState({ withUntaggedOnly: event.target.checked })
+      return
+    }
     this.props.setFilter(filter, event.target.checked)
   }
 
@@ -109,8 +114,8 @@ export default class Sidebar extends Component {
         {tags.length > 0 && <hr />}
 
         <div className='tag-filters'>
-          {Array.from(['animated-only', 'static-only']).concat(tags).map((tag, index) => {
-            const isTagEditing = tagEditing[index] && index > 1
+          {Array.from(['animated-only', 'static-only', 'untagged-only']).concat(tags).map((tag, index) => {
+            const isTagEditing = tagEditing[index] && index > 2
             return (
               <div key={index} className='filter'>
                 {!isTagEditing &&
@@ -119,7 +124,7 @@ export default class Sidebar extends Component {
                     <input name={tag} disabled={index < 2 ? (index === 0 ? withStaticOnly : withAnimatedOnly) : false} onChange={this.handleChange} type='checkbox' />
                     {tag}
                   </label>
-                  {index > 1 &&
+                  {index > 2 &&
                   <Fragment>
                     {' '}
                     <button className='edit-button' onClick={() => { this.editTagName(tag, index) }}>
@@ -152,7 +157,11 @@ export default class Sidebar extends Component {
           </button>
           {' '}
           <button onClick={this.props.deleteSelection}>
-            <FormattedMessage id='@showcase.images.menuBar.' defaultMessage='Delete' />
+            <FormattedMessage id='@showcase.images.menuBar.delete' defaultMessage='Delete' />
+          </button>
+          {' '}
+          <button onClick={this.props.moveSelection}>
+            <FormattedMessage id='@showcase.images.menuBar.move' defaultMessage='Move' />
           </button>
         </Fragment>}
 

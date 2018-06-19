@@ -31,7 +31,7 @@ export default class Sidebar extends Component {
             background: #222;
             float: left;
             display: block;
-            width: 20%;
+            width: 5%;
             padding: 12px;
           }
 

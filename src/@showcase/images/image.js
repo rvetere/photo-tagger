@@ -7,7 +7,8 @@ export default class Image extends Component {
 
     this.imageRef = React.createRef()
     this.handleOnLoad = this.handleOnLoad.bind(this)
-    this.state = this.props.isFinal || {
+    const isFinal = this.props.isFinal.width ? this.props.isFinal : null
+    this.state = isFinal || {
       width: null,
       height: null
     }
@@ -32,37 +33,77 @@ export default class Image extends Component {
       // in this case the "onLoad" event will never occur!
       this.handleOnLoad()
     }
+
+    if (this.props.intersectionObserver && this.props.isFinal) {
+      const { intersectionObserver } = this.props
+      // intersectionObserver.observe(this.imageRef.current)
+    }
   }
 
   render () {
     const { src, alt, isFinal, isSelected, groupId = null, metaData = {}, ...props } = this.props
     const defaultStyles = isSelected ? { borderColor: '#0490CE' } : {}
     let styleObj = {}
-    if (isFinal) {
-      styleObj = { width: isFinal.width * 1.3 }
+    let styleObjDiv = {}
+    if (isFinal && isFinal.width) {
+      let newWidth = isFinal.width * 1
+      let percentage = ((newWidth * 100) / isFinal.width) / 100
+      let newHeight = isFinal.height * percentage
+      styleObj = { width: newWidth }
+      styleObjDiv = { width: newWidth, height: newHeight }
       if (isFinal.isPortrait) {
         if (props.sidebarWidth > 650) {
-          styleObj = { height: isFinal.height * 1.3 }
-          if (
-            (isFinal.width * 1.3) > props.sidebarWidth ||
-            (isFinal.width * 1.3) >= (props.sidebarWidth - 100)
-          ) {
-            styleObj = { width: props.sidebarWidth }
-          }
+          styleObj = { height: newHeight }
+          styleObjDiv = { height: newHeight, width: newWidth }
+        }
+
+        if (
+          (newWidth) > props.sidebarWidth ||
+          (newWidth) >= (props.sidebarWidth - 100)
+        ) {
+          newWidth = props.sidebarWidth - 24
+          percentage = ((newWidth * 100) / isFinal.width) / 100
+          styleObj = { width: newWidth }
+          styleObjDiv = { width: newWidth, height: isFinal.height * percentage }
+        }
+      } else {
+        if (
+          (newWidth) > props.mainWidth ||
+          (newWidth) >= (props.mainWidth - 100)
+        ) {
+          newWidth = props.mainWidth - 24
+          percentage = ((newWidth * 100) / isFinal.width) / 100
+          styleObj = { width: newWidth }
+          styleObjDiv = { width: newWidth, height: isFinal.height * percentage }
         }
       }
     }
+
+    // const injectedProps = isFinal && isFinal.width ? {
+    //   ['data-src']: src,
+    //   src: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+    // } : {
+    //   src
+    // }
+
+    const injectedProps = {
+      src
+    }
+
+    // style={styleObjDiv}
     return (
       <div className='media'>
-        <img className={`${groupId ? 'in-group' : ''} ${metaData.tags ? 'has-tags' : ''}`} media={props.media} ref={this.imageRef} style={{...styleObj, ...defaultStyles}} src={src} alt={alt} onLoad={this.handleOnLoad} onClick={this.props.handleClick} />
+        <img {...injectedProps} className={`${groupId ? 'in-group' : ''} ${metaData.tags ? 'has-tags' : ''}`} media={props.media} ref={this.imageRef} style={{...styleObj, ...defaultStyles}} alt={alt} onLoad={this.handleOnLoad} onClick={this.props.handleClick} />
         <MetaInfo media={props.media} metaData={metaData} groupId={groupId} {...props} />
 
         <style jsx>{`
           div {
             position: relative;
             display: inline-block;
+            vertical-align: middle ;
             margin-right: 12px;
             margin-bottom: 12px;
+            overflow: hidden;
           }
 
           span {

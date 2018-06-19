@@ -48,11 +48,15 @@ class Images extends Component {
     this.handleTagEdit = this.handleTagEdit.bind(this)
     this.startEditingGroup = this.startEditingGroup.bind(this)
     this.abortGroupEdit = this.abortGroupEdit.bind(this)
+    this.deleteFromGroup = this.deleteFromGroup.bind(this)
     this.removeTagFromMedia = this.removeTagFromMedia.bind(this)
     this.setItemSafe = this.setItemSafe.bind(this)
     this.deleteSelection = this.deleteSelection.bind(this)
+    this.moveSelection = this.moveSelection.bind(this)
     this.resetSession = this.resetSession.bind(this)
     this.handleClick = this.handleClick.bind(this)
+    this.ioCallback = this.ioCallback.bind(this)
+    this.removeFromSession = this.removeFromSession.bind(this)
 
     const folderPathHash = stringHash(this.props.folderPath)
     const metaItemId = `meta-${folderPathHash}`
@@ -74,9 +78,25 @@ class Images extends Component {
       isEditingGroup: null,
       withAnimatedOnly: null,
       withStaticOnly: null,
+      withUntaggedOnly: null,
+      intersectionObserver: new IntersectionObserver(this.ioCallback, {
+        rootMargin: '0px',
+        threshold: 0
+      }),
       metaItemId,
       groupsItemId
     }
+  }
+
+  ioCallback (entries, observer) {
+    entries.forEach((entry) => {
+      const fileUri = entry.target.attributes['data-src'].nodeValue
+      if (entry.isIntersecting) {
+        entry.target.src = fileUri
+      } else {
+        entry.target.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+      }
+    })
   }
 
   setItemSafe (id, value, justWrite = false) {
@@ -91,7 +111,29 @@ class Images extends Component {
     const { folderPath } = this.props
     const { selection } = this.state
     selection.forEach(file => fs.unlinkSync(path.resolve(folderPath, file)))
-    this.resetSession()
+    this.removeFromSession(selection)
+  }
+
+  moveSelection () {
+    const { folderPath } = this.props
+    const { selection } = this.state
+    this.props.getMoveToFolder((targetPath) => {
+      selection.forEach(media => {
+        fs.copyFileSync(`${folderPath}/${media}`, `${targetPath}/${media}`)
+        fs.unlinkSync(`${folderPath}/${media}`)
+      })
+    })
+
+    this.removeFromSession(selection)
+  }
+
+  removeFromSession (selection) {
+    const { medias } = this.props
+    const { loadedMedias } = this.state
+    const filteredMedias = medias.filter(media => !selection.some(entry => entry === media))
+    const filteredLoadedMedias = loadedMedias.filter(media => !selection.some(entry => entry === media))
+    this.props.updateShowcaseState({ medias: filteredMedias })
+    this.setState({ loadedMedias: filteredLoadedMedias, selection: [] })
   }
 
   resetSession () {
@@ -278,17 +320,28 @@ class Images extends Component {
     this.setState({ isEditingGroup: null })
   }
 
+  deleteFromGroup (groupId, media) {
+    let { groups, groupsItemId } = this.state
+    groups.forEach(group => {
+      group.selection = group.selection.filter(entry => entry !== media)
+    })
+
+    groups = groups.filter(group => group.selection.length)
+    this.setItemSafe(groupsItemId, JSON.stringify(groups), true)
+    this.setState({ groups })
+  }
+
   renderMedia (media, index, keyType = 'default', isFinal = false) {
     const { folderPath } = this.props
-    const { selection, meta, groups } = this.state
+    const { selection, meta, groups, intersectionObserver } = this.state
     const id = stringHash(media)
     const isSelected = selection.some((entry) => media === entry)
 
     let groupId = null
-    const isInGroup = groups.some(({ selection }) => {
+    const isInGroup = groups.some(({ id, selection }) => {
       const inGroup = selection.some(entry => entry === media)
       if (inGroup) {
-        groupId = stringHash(selection.join(','))
+        groupId = id
       }
       return inGroup
     })
@@ -298,12 +351,14 @@ class Images extends Component {
       groupId,
       isSelected,
       media,
+      isFinal,
+      intersectionObserver,
       handleClick: this.handleClick,
       onLoad: this.handleOnLoad,
       isEditingGroup: this.state.isEditingGroup,
       startEditingGroup: this.startEditingGroup,
-      removeTagFromMedia: this.removeTagFromMedia,
-      isFinal: isFinal
+      deleteFromGroup: this.deleteFromGroup,
+      removeTagFromMedia: this.removeTagFromMedia
     }
 
     if (Images.isVideo(media)) {
@@ -344,8 +399,8 @@ class Images extends Component {
   }
 
   render () {
-    const { medias, folderPath, setAnimatedOnly, setStaticOnly } = this.props
-    const { loaded, loadedMedias, selection, meta, withAnimatedOnly, withStaticOnly, tagSpreading } = this.state
+    const { medias, folderPath, setAnimatedOnly, setStaticOnly, setUntaggedOnly } = this.props
+    const { loaded, loadedMedias, selection, meta, withAnimatedOnly, withStaticOnly, withUntaggedOnly, tagSpreading } = this.state
     return (
       <Fragment>
         {
@@ -362,10 +417,13 @@ class Images extends Component {
               isEditingGroup={this.state.isEditingGroup}
               abortGroupEdit={this.abortGroupEdit}
               deleteSelection={this.deleteSelection}
+              moveSelection={this.moveSelection}
               setAnimatedOnly={setAnimatedOnly}
               withAnimatedOnly={withAnimatedOnly}
               setStaticOnly={setStaticOnly}
               withStaticOnly={withStaticOnly}
+              setUntaggedOnly={setUntaggedOnly}
+              withUntaggedOnly={withUntaggedOnly}
               meta={meta}
               isVideo={Images.isVideo}
               onSelectionFinish={this.onSelectionFinish}
@@ -401,7 +459,8 @@ class Images extends Component {
 export default compose(
   withState('animatedOnly', 'setAnimatedOnly', false),
   withState('staticOnly', 'setStaticOnly', false),
-  mapProps(({ medias, animatedOnly, setAnimatedOnly, staticOnly, setStaticOnly, ...props }) => {
+  withState('untaggedOnly', 'setUntaggedOnly', false),
+  mapProps(({ medias, animatedOnly, setAnimatedOnly, staticOnly, setStaticOnly, untaggedOnly, setUntaggedOnly, ...props }) => {
     const folderPathHash = stringHash(props.folderPath)
     const metaItemId = `meta-${folderPathHash}`
     const groupsItemId = `groups-${folderPathHash}`
@@ -412,14 +471,22 @@ export default compose(
     if (animatedOnly) {
       finalMedias = finalMedias.filter(m => {
         const ext = m.split('.')[1]
-        return Images.isVideo(m) || ext.includes('gif')
+        return Images.isVideo(m) || ext.toLowerCase().includes('gif')
       })
     }
 
     if (staticOnly) {
       finalMedias = finalMedias.filter(m => {
         const ext = m.split('.')[1]
-        return !Images.isVideo(m) && !ext.includes('gif')
+        return !Images.isVideo(m) && !ext.toLowerCase().includes('gif')
+      })
+    }
+
+    if (untaggedOnly) {
+      finalMedias = finalMedias.filter(m => {
+        const id = stringHash(m)
+        const metaData = meta[id]
+        return !metaData
       })
     }
 
@@ -431,7 +498,9 @@ export default compose(
       animatedOnly,
       setAnimatedOnly,
       staticOnly,
-      setStaticOnly
+      setStaticOnly,
+      untaggedOnly,
+      setUntaggedOnly
     }
   })
 )(Images)

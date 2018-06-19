@@ -30,16 +30,6 @@ class Layout extends Component {
         }
 
         {this.renderChildren()}
-
-        <style jsx>{`
-          div {
-            height: 100%;
-            padding: 18px 12px;
-            position: relative;
-            color: #ddd;
-            font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
-          }
-        `}</style>
       </Fragment>
     )
   }

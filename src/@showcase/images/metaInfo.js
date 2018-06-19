@@ -28,6 +28,10 @@ export default class MetaInfo extends Component {
             <button disabled={this.props.isEditingGroup} onClick={() => { this.props.startEditingGroup(groupId) }}>
               <FormattedMessage id='@showcase.images.metaInfo.editGroup' defaultMessage='E' />
             </button>
+            {' '}
+            <button disabled={this.props.isEditingGroup} onClick={() => { this.props.deleteFromGroup(groupId, props.media) }}>
+              <FormattedMessage id='@showcase.images.metaInfo.deleteFromGroup' defaultMessage='-' />
+            </button>
           </figure>
         }
 
@@ -60,7 +64,7 @@ export default class MetaInfo extends Component {
             position: absolute;
             color: black;
             left: 6px;
-            top: 45px;
+            bottom: -3px;
             font-size: 12px;
             background: rgba(122, 122, 200, .8)
           }
